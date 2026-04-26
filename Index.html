@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>הצהרת היעדרות</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+body { font-family: Arial; background:#eef1f5; margin:0; }
+.container { max-width: 750px; margin: 40px auto; background:#fff; padding:40px; border:1px solid #dcdcdc; }
+h1 { text-align:center; margin-bottom:30px; border-bottom:2px solid #000; padding-bottom:10px; }
+label { font-weight:bold; }
+input, textarea { width:100%; padding:10px; margin:6px 0 16px; border:1px solid #999; }
+.row { display:flex; gap:10px; }
+button { width:100%; padding:12px; margin-top:10px; border:none; cursor:pointer; font-size:15px; }
+.primary { background:#000; color:#fff; }
+.lock { background:#555; color:#fff; }
+.clear { background:#c0392b; color:#fff; }
+.signature-pad { border:1px solid #000; height:150px; }
+.footer { margin-top:40px; font-size:14px; }
+@media print { button { display:none; } body { background:#fff; } }
+</style>
+</head>
+
+<body>
+<div class="container" id="formContent">
+<h1>הצהרת היעדרות מהעבודה</h1>
+
+<label>שם העובד</label>
+<input type="text" id="name">
+
+<label>תעודת זהות</label>
+<input type="text" id="id">
+
+<label>תאריכי היעדרות</label>
+<div class="row">
+<input type="date" id="dateFrom">
+<input type="date" id="dateTo">
+</div>
+
+<label>סיבת ההיעדרות</label>
+<textarea id="reason"></textarea>
+
+<label>חתימה</label>
+<canvas id="signature" class="signature-pad"></canvas>
+<button class="clear" onclick="clearSignature()">נקה חתימה</button>
+
+<button class="lock" onclick="lockForm()">נעל טופס</button>
+<button class="primary" onclick="generatePDF()">הורד PDF</button>
+
+<div class="footer">
+אני מצהיר כי הפרטים שמסרתי נכונים ומלאים.
+</div>
+</div>
+
+<script>
+const canvas = document.getElementById('signature');
+const ctx = canvas.getContext('2d');
+let drawing = false;
+let locked = false;
+
+canvas.addEventListener('mousedown', () => { if(!locked) drawing = true });
+canvas.addEventListener('mouseup', () => drawing = false);
+canvas.addEventListener('mousemove', draw);
+
+function draw(e) {
+  if (!drawing || locked) return;
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.lineTo(e.offsetX, e.offsetY);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(e.offsetX, e.offsetY);
+}
+
+function clearSignature() {
+  if(locked) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+document.getElementById('dateFrom').addEventListener('change', function() {
+  const from = new Date(this.value);
+  if (!this.value) return;
+
+  const maxDate = new Date(from);
+  maxDate.setDate(maxDate.getDate() + 1);
+
+  const toInput = document.getElementById('dateTo');
+  toInput.min = this.value;
+  toInput.max = maxDate.toISOString().split('T')[0];
+});
+
+function lockForm() {
+  locked = true;
+  document.querySelectorAll('input, textarea').forEach(el => el.disabled = true);
+  alert('הטופס ננעל');
+}
+
+function generatePDF() {
+  if(!locked){
+    alert('יש לנעול את הטופס לפני הורדה');
+    return;
+  }
+
+  const fromVal = document.getElementById('dateFrom').value;
+  const toVal = document.getElementById('dateTo').value;
+
+  if (!fromVal || !toVal) {
+    alert('יש לבחור תאריכים');
+    return;
+  }
+
+  const from = new Date(fromVal);
+  const to = new Date(toVal);
+  const diffDays = (to - from) / (1000 * 60 * 60 * 24) + 1;
+
+  if (diffDays > 2) {
+    alert('ניתן להצהיר עד יומיים בלבד');
+    return;
+  }
+
+  html2pdf().from(document.getElementById('formContent')).save('הצהרת_היעדרות.pdf');
+}
+</script>
+
+</body>
+</html>
